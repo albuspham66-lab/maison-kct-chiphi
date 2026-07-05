@@ -6,7 +6,7 @@
 <title>Maison De KCT · Sổ quỹ</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root{
   --bg:#060810; --bg2:#0b1020; --bg3:#101628; --surface:#161f35; --surface2:#1c2840;
@@ -581,76 +581,76 @@ document.getElementById('btnExport').onclick = () => exportExcel();
 
 const HDR = ['NGÀY','THU','CHI','TẠM ỨNG','NỘI DUNG','PHƯƠNG THỨC THANH TOÁN','PHẢI LÀM','CHỨNG TỪ'];
 const COL_WIDTHS = [12,14,14,14,35,26,26,40];
-
-function xlsStyle(opts){
-  return {
-    font: { name:'Arial', sz:10, ...(opts.font||{}) },
-    border: {
-      top:{style:'thin',color:{rgb:'D0D7E3'}}, bottom:{style:'thin',color:{rgb:'D0D7E3'}},
-      left:{style:'thin',color:{rgb:'D0D7E3'}}, right:{style:'thin',color:{rgb:'D0D7E3'}}
-    },
-    fill: opts.fill || { patternType:'none' },
-    alignment: { vertical:'center', wrapText:true, ...(opts.alignment||{}) },
-    numFmt: opts.numFmt || 'General'
-  };
-}
-const XS = {
-  header: xlsStyle({ font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'1A2035'}}, alignment:{horizontal:'center'} }),
-  cell:   xlsStyle({}),
-  moneyThu: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'1E7A55'}} }),
-  moneyChi: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'B0483D'}} }),
-  moneyTam: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'A87F26'}} })
+const THIN_BORDER = {
+  top:{style:'thin',color:{argb:'FFD0D7E3'}}, bottom:{style:'thin',color:{argb:'FFD0D7E3'}},
+  left:{style:'thin',color:{argb:'FFD0D7E3'}}, right:{style:'thin',color:{argb:'FFD0D7E3'}}
 };
 
-function buildSheet(list){
-  const ws = {};
-  const range = { s:{r:0,c:0}, e:{r:0,c:HDR.length-1} };
-  HDR.forEach((h,ci)=>{ ws[XLSX.utils.encode_cell({r:0,c:ci})] = { v:h, t:'s', s:XS.header }; });
-  list.forEach((e,ri)=>{
-    const r = ri+1;
-    const ctText = (e.maison_kct_chungtu||[]).map((c,i)=> `${i+1}. ${c.mo_ta}${c.da_co ? ' (đã có)' : ' (thiếu)'}`).join('\n');
-    const vals = [
-      { v: fmtDate(e.ngay), t:'s', s:XS.cell },
-      { v: e.thu||0, t:'n', s:XS.moneyThu },
-      { v: e.chi||0, t:'n', s:XS.moneyChi },
-      { v: e.tam_ung||0, t:'n', s:XS.moneyTam },
-      { v: e.noi_dung||'', t:'s', s:XS.cell },
-      { v: e.phuong_thuc_tt||'', t:'s', s:XS.cell },
-      { v: e.phai_lam||'', t:'s', s:XS.cell },
-      { v: ctText, t:'s', s:XS.cell }
-    ];
-    vals.forEach((c,ci)=>{ ws[XLSX.utils.encode_cell({r,c:ci})] = c; });
-    range.e.r = r;
-  });
-  ws['!ref'] = XLSX.utils.encode_range(range);
-  ws['!cols'] = COL_WIDTHS.map(w=>({wch:w}));
-  ws['!autofilter'] = { ref: XLSX.utils.encode_range({s:{r:0,c:0},e:{r:0,c:HDR.length-1}}) };
-  ws['!freeze'] = { xSplit:1, ySplit:1, topLeftCell:'B2', activePane:'bottomRight', state:'frozen' };
-  return ws;
-}
-
 function safeSheetName(k){
-  // k dạng "YYYY-MM" -> "Thang MM-YYYY"
   const [y,m] = k.split('-');
   return `Thang ${parseInt(m)}-${y}`;
 }
 
-function exportExcel(){
-  const wb = XLSX.utils.book_new();
-  if (CURRENT_MONTH === 'all'){
-    const keys = [...new Set(ALL_ENTRIES.map(e=>monthKey(e.ngay)))].sort();
-    for (const k of keys){
-      const list = ALL_ENTRIES.filter(e=>monthKey(e.ngay)===k).sort((a,b)=>new Date(a.ngay)-new Date(b.ngay));
-      XLSX.utils.book_append_sheet(wb, buildSheet(list), safeSheetName(k).slice(0,31));
+function fillSheet(ws, list){
+  ws.columns = HDR.map((h,i)=>({ header:h, width: COL_WIDTHS[i] }));
+  const headerRow = ws.getRow(1);
+  headerRow.height = 22;
+  headerRow.eachCell(cell=>{
+    cell.font = { name:'Arial', size:10, bold:true, color:{argb:'FFFFFFFF'} };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1A2035'} };
+    cell.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
+    cell.border = THIN_BORDER;
+  });
+
+  list.forEach(e=>{
+    const ctText = (e.maison_kct_chungtu||[]).map((c,i)=> `${i+1}. ${c.mo_ta}${c.da_co ? ' (đã có)' : ' (thiếu)'}`).join('\n');
+    const row = ws.addRow([
+      fmtDate(e.ngay), e.thu||0, e.chi||0, e.tam_ung||0, e.noi_dung||'', e.phuong_thuc_tt||'', e.phai_lam||'', ctText
+    ]);
+    row.eachCell((cell, colNumber)=>{
+      cell.font = { name:'Arial', size:10 };
+      cell.alignment = { vertical:'middle', wrapText:true };
+      cell.border = THIN_BORDER;
+      if (colNumber===2){ cell.numFmt='#,##0'; cell.alignment.horizontal='right'; cell.font.color={argb:'FF1E7A55'}; }
+      if (colNumber===3){ cell.numFmt='#,##0'; cell.alignment.horizontal='right'; cell.font.color={argb:'FFB0483D'}; }
+      if (colNumber===4){ cell.numFmt='#,##0'; cell.alignment.horizontal='right'; cell.font.color={argb:'FFA87F26'}; }
+    });
+  });
+
+  const lastCol = String.fromCharCode(64 + HDR.length);
+  ws.autoFilter = `A1:${lastCol}1`;
+  ws.views = [{ state:'frozen', xSplit:1, ySplit:1 }];
+}
+
+async function exportExcel(){
+  try{
+    const wb = new ExcelJS.Workbook();
+    if (CURRENT_MONTH === 'all'){
+      const keys = [...new Set(ALL_ENTRIES.map(e=>monthKey(e.ngay)))].sort();
+      for (const k of keys){
+        const list = ALL_ENTRIES.filter(e=>monthKey(e.ngay)===k).sort((a,b)=>new Date(a.ngay)-new Date(b.ngay));
+        fillSheet(wb.addWorksheet(safeSheetName(k).slice(0,31)), list);
+      }
+      if (!keys.length) fillSheet(wb.addWorksheet('Tat ca'), []);
+    } else {
+      const list = getFiltered().slice().sort((a,b)=> new Date(a.ngay)-new Date(b.ngay));
+      fillSheet(wb.addWorksheet(safeSheetName(CURRENT_MONTH).slice(0,31)), list);
     }
-    if (!keys.length) XLSX.utils.book_append_sheet(wb, buildSheet([]), 'Tat ca');
-  } else {
-    const list = getFiltered().slice().sort((a,b)=> new Date(a.ngay)-new Date(b.ngay));
-    XLSX.utils.book_append_sheet(wb, buildSheet(list), safeSheetName(CURRENT_MONTH).slice(0,31));
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type:'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ChiPhi_MaisonKCT_${CURRENT_MONTH==='all' ? 'TatCa' : CURRENT_MONTH}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Đã xuất file Excel');
+  }catch(err){
+    console.error(err);
+    toast('Lỗi xuất Excel: ' + err.message, true);
   }
-  const fname = `ChiPhi_MaisonKCT_${CURRENT_MONTH==='all' ? 'TatCa' : CURRENT_MONTH}.xlsx`;
-  XLSX.writeFile(wb, fname);
-  toast('Đã xuất file Excel');
 }
 
 loadData();
