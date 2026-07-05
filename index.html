@@ -59,6 +59,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
 .mc.blue::after{background:linear-gradient(90deg,transparent,var(--blue2),transparent);}
 .mc.notif::after{background:linear-gradient(90deg,transparent,var(--red2),transparent);}
 .mc.notif:hover{background:var(--surface);}
+.mc.active{outline:1.5px solid var(--border3);background:var(--surface);}
 .mc-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600;}
 .mc-val{font-size:22px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;font-family:var(--font-mono);}
 .mc.green .mc-val{color:var(--green2);}
@@ -197,10 +198,10 @@ textarea{resize:vertical;min-height:64px;}
 
   <div class="page">
     <div class="mrow">
-      <div class="mc green"><div class="mc-lbl">Thu</div><div class="mc-val" id="sumThu">0</div></div>
-      <div class="mc red"><div class="mc-lbl">Chi</div><div class="mc-val" id="sumChi">0</div></div>
-      <div class="mc amber"><div class="mc-lbl">Tạm ứng</div><div class="mc-val" id="sumTam">0</div></div>
-      <div class="mc blue"><div class="mc-lbl">Tồn quỹ</div><div class="mc-val" id="sumTon">0</div></div>
+      <div class="mc green" id="cardThu" style="cursor:pointer"><div class="mc-lbl">Thu</div><div class="mc-val" id="sumThu">0</div></div>
+      <div class="mc red" id="cardChi" style="cursor:pointer"><div class="mc-lbl">Chi</div><div class="mc-val" id="sumChi">0</div></div>
+      <div class="mc amber" id="cardTam" style="cursor:pointer"><div class="mc-lbl">Tạm ứng</div><div class="mc-val" id="sumTam">0</div></div>
+      <div class="mc blue" id="cardTon" style="cursor:pointer"><div class="mc-lbl">Tồn quỹ</div><div class="mc-val" id="sumTon">0</div></div>
       <div class="mc notif" id="notifCard" style="cursor:pointer">
         <div class="mc-lbl">Thông báo</div>
         <div class="mc-val" id="sumNotif">0</div>
@@ -297,6 +298,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let ALL_ENTRIES = [];
 let CURRENT_MONTH = 'all';
+let FILTER_TYPE = null; // null | 'thu' | 'chi' | 'tam'
 let EDIT_CT_ITEMS = [];
 let openDetailRow = null;
 
@@ -372,14 +374,29 @@ function getFiltered(){
   return ALL_ENTRIES.filter(e => monthKey(e.ngay) === CURRENT_MONTH);
 }
 
+function applyTypeFilter(list){
+  if (FILTER_TYPE === 'thu') return list.filter(e => Number(e.thu) > 0);
+  if (FILTER_TYPE === 'chi') return list.filter(e => Number(e.chi) > 0);
+  if (FILTER_TYPE === 'tam') return list.filter(e => Number(e.tam_ung) > 0);
+  return list;
+}
+
+const FILTER_LABELS = { thu:'Thu', chi:'Chi', tam:'Tạm ứng' };
+
 function renderAll(){
-  const list = getFiltered();
-  document.getElementById('rangeLabel').textContent =
-    CURRENT_MONTH === 'all' ? `Toàn bộ · ${list.length} giao dịch` : `${monthLabel(CURRENT_MONTH)} · ${list.length} giao dịch`;
+  const monthList = getFiltered();
+  const list = applyTypeFilter(monthList);
+
+  const baseLabel = CURRENT_MONTH === 'all' ? 'Toàn bộ' : monthLabel(CURRENT_MONTH);
+  const filterLabel = FILTER_TYPE ? ` · lọc: ${FILTER_LABELS[FILTER_TYPE]}` : '';
+  document.getElementById('rangeLabel').textContent = `${baseLabel}${filterLabel} · ${list.length} giao dịch`;
+
+  document.querySelectorAll('#cardThu,#cardChi,#cardTam,#cardTon').forEach(el => el.classList.remove('active'));
+  if (FILTER_TYPE) document.getElementById('card' + FILTER_TYPE.charAt(0).toUpperCase() + FILTER_TYPE.slice(1)).classList.add('active');
 
   let thu=0, chi=0, tam=0;
   let notifCount = 0;
-  for (const e of list){
+  for (const e of monthList){
     thu += Number(e.thu)||0; chi += Number(e.chi)||0; tam += Number(e.tam_ung)||0;
     if (e.phai_lam && !e.phai_lam_done) notifCount++;
     for (const c of (e.maison_kct_chungtu||[])){ if (!c.da_co) notifCount++; }
@@ -387,7 +404,7 @@ function renderAll(){
   document.getElementById('sumThu').textContent = fmtMoney(thu);
   document.getElementById('sumChi').textContent = fmtMoney(chi);
   document.getElementById('sumTam').textContent = fmtMoney(tam);
-  document.getElementById('sumTon').textContent = fmtMoney(thu - chi - tam);
+  document.getElementById('sumTon').textContent = fmtMoney(thu - chi);
   const notifEl = document.getElementById('sumNotif');
   notifEl.textContent = notifCount;
   notifEl.className = 'mc-val' + (notifCount === 0 ? ' zero' : '');
@@ -594,6 +611,16 @@ document.getElementById('ctAddBtn').onclick = () => {
 document.getElementById('btnAdd').onclick = openAddModal;
 
 document.getElementById('notifCard').onclick = openNotifModal;
+
+function toggleTypeFilter(type){
+  FILTER_TYPE = (FILTER_TYPE === type) ? null : type;
+  renderAll();
+}
+document.getElementById('cardThu').onclick = () => toggleTypeFilter('thu');
+document.getElementById('cardChi').onclick = () => toggleTypeFilter('chi');
+document.getElementById('cardTam').onclick = () => toggleTypeFilter('tam');
+document.getElementById('cardTon').onclick = () => toggleTypeFilter(null);
+
 document.getElementById('notifCloseBtn').onclick = () => document.getElementById('notifOverlay').classList.remove('show');
 
 function openNotifModal(){
