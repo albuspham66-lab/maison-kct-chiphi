@@ -629,19 +629,24 @@ function buildSheet(list){
   return ws;
 }
 
+function safeSheetName(k){
+  // k dạng "YYYY-MM" -> "Thang MM-YYYY"
+  const [y,m] = k.split('-');
+  return `Thang ${parseInt(m)}-${y}`;
+}
+
 function exportExcel(){
   const wb = XLSX.utils.book_new();
   if (CURRENT_MONTH === 'all'){
     const keys = [...new Set(ALL_ENTRIES.map(e=>monthKey(e.ngay)))].sort();
     for (const k of keys){
       const list = ALL_ENTRIES.filter(e=>monthKey(e.ngay)===k).sort((a,b)=>new Date(a.ngay)-new Date(b.ngay));
-      const sheetName = monthLabel(k).replace('Tháng ','Thang ');
-      XLSX.utils.book_append_sheet(wb, buildSheet(list), sheetName.slice(0,31));
+      XLSX.utils.book_append_sheet(wb, buildSheet(list), safeSheetName(k).slice(0,31));
     }
     if (!keys.length) XLSX.utils.book_append_sheet(wb, buildSheet([]), 'Tat ca');
   } else {
     const list = getFiltered().slice().sort((a,b)=> new Date(a.ngay)-new Date(b.ngay));
-    XLSX.utils.book_append_sheet(wb, buildSheet(list), monthLabel(CURRENT_MONTH).replace('Tháng ','Thang '));
+    XLSX.utils.book_append_sheet(wb, buildSheet(list), safeSheetName(CURRENT_MONTH).slice(0,31));
   }
   const fname = `ChiPhi_MaisonKCT_${CURRENT_MONTH==='all' ? 'TatCa' : CURRENT_MONTH}.xlsx`;
   XLSX.writeFile(wb, fname);
