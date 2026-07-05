@@ -50,18 +50,22 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
 .ph-right{display:flex;gap:8px;flex-shrink:0;}
 .page{padding:20px 28px 60px;}
 
-.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.mrow{display:grid;grid-template-columns:repeat(4,1fr) 1.1fr;gap:12px;margin-bottom:18px;}
 .mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rlg);padding:18px 20px;position:relative;overflow:hidden;}
 .mc::after{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;}
 .mc.green::after{background:linear-gradient(90deg,transparent,var(--green2),transparent);}
 .mc.red::after{background:linear-gradient(90deg,transparent,var(--red2),transparent);}
 .mc.amber::after{background:linear-gradient(90deg,transparent,var(--amber2),transparent);}
 .mc.blue::after{background:linear-gradient(90deg,transparent,var(--blue2),transparent);}
+.mc.notif::after{background:linear-gradient(90deg,transparent,var(--red2),transparent);}
+.mc.notif:hover{background:var(--surface);}
 .mc-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600;}
 .mc-val{font-size:22px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;font-family:var(--font-mono);}
 .mc.green .mc-val{color:var(--green2);}
 .mc.red .mc-val{color:var(--red2);}
 .mc.amber .mc-val{color:var(--amber2);}
+.mc.notif .mc-val{color:var(--red2);}
+.mc.notif .mc-val.zero{color:var(--text2);}
 
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rlg);}
 .tw{overflow-x:auto;}
@@ -75,6 +79,9 @@ tbody tr:hover td{background:rgba(255,255,255,0.018);}
 .ngay{font-family:var(--font-mono);font-size:12px;color:var(--text2);white-space:nowrap;}
 .noidung{max-width:280px;}
 .phai-lam{font-size:11px;color:var(--text2);margin-top:4px;}
+.pl-check{display:flex;align-items:flex-start;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text);}
+.pl-check input[type=checkbox]{width:15px;height:15px;margin-top:1px;accent-color:var(--green2);cursor:pointer;flex-shrink:0;}
+.pl-done{text-decoration:line-through;color:var(--text3);}
 
 .b{display:inline-flex;align-items:center;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;}
 .b-green{background:var(--greenbg);color:var(--green2);border:1px solid var(--greenborder);}
@@ -120,6 +127,14 @@ textarea{resize:vertical;min-height:64px;}
 .toast.err{border-color:var(--redborder);color:var(--red2);}
 
 .empty{padding:60px 20px;text-align:center;color:var(--text2);}
+.notif-sec-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;}
+.notif-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;}
+.notif-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:pointer;}
+.notif-item:hover{border-color:var(--border3);}
+.notif-item .ni-date{font-family:var(--font-mono);font-size:11px;color:var(--text2);}
+.notif-item .ni-main{font-size:13px;color:var(--text);margin-top:2px;}
+.notif-item .ni-sub{font-size:11.5px;color:var(--amber2);margin-top:2px;}
+.notif-empty{font-size:12.5px;color:var(--text3);padding:8px 0;}
 .empty .big{font-family:var(--font-display);font-size:16px;color:var(--text);margin-bottom:6px;}
 
 .mobile-topbar{display:none;position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;}
@@ -135,6 +150,7 @@ textarea{resize:vertical;min-height:64px;}
   .ph-right .btn{flex:1;justify-content:center;}
   .page{padding:14px 14px 60px;}
   .mrow{grid-template-columns:1fr 1fr;gap:10px;}
+  .mc.notif{grid-column:1 / -1;}
   .mc{padding:14px;}
   .mc-val{font-size:18px;}
   .card{border-radius:12px;}
@@ -185,6 +201,10 @@ textarea{resize:vertical;min-height:64px;}
       <div class="mc red"><div class="mc-lbl">Chi</div><div class="mc-val" id="sumChi">0</div></div>
       <div class="mc amber"><div class="mc-lbl">Tạm ứng</div><div class="mc-val" id="sumTam">0</div></div>
       <div class="mc blue"><div class="mc-lbl">Tồn quỹ</div><div class="mc-val" id="sumTon">0</div></div>
+      <div class="mc notif" id="notifCard" style="cursor:pointer">
+        <div class="mc-lbl">Thông báo</div>
+        <div class="mc-val" id="sumNotif">0</div>
+      </div>
     </div>
 
     <div class="card">
@@ -198,6 +218,7 @@ textarea{resize:vertical;min-height:64px;}
               <th style="width:100px">Tạm ứng</th>
               <th>Nội dung</th>
               <th style="width:150px">Phương thức TT</th>
+              <th style="width:170px">Phải làm</th>
               <th style="width:110px">Chứng từ</th>
             </tr>
           </thead>
@@ -244,6 +265,23 @@ textarea{resize:vertical;min-height:64px;}
     <div class="mfoot">
       <button class="btn btn-ghost" id="btnCancel">Huỷ</button>
       <button class="btn btn-primary" id="btnSave">Lưu giao dịch</button>
+    </div>
+  </div>
+</div>
+
+<div class="mbg" id="notifOverlay">
+  <div class="modal">
+    <div class="modal-title">Thông báo</div>
+    <div class="notif-sec">
+      <div class="notif-sec-lbl">Việc chưa làm</div>
+      <div id="notifTodoList" class="notif-list"></div>
+    </div>
+    <div class="notif-sec" style="margin-top:16px;">
+      <div class="notif-sec-lbl">Chứng từ còn thiếu</div>
+      <div id="notifCtList" class="notif-list"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="notifCloseBtn">Đóng</button>
     </div>
   </div>
 </div>
@@ -340,11 +378,19 @@ function renderAll(){
     CURRENT_MONTH === 'all' ? `Toàn bộ · ${list.length} giao dịch` : `${monthLabel(CURRENT_MONTH)} · ${list.length} giao dịch`;
 
   let thu=0, chi=0, tam=0;
-  for (const e of list){ thu += Number(e.thu)||0; chi += Number(e.chi)||0; tam += Number(e.tam_ung)||0; }
+  let notifCount = 0;
+  for (const e of list){
+    thu += Number(e.thu)||0; chi += Number(e.chi)||0; tam += Number(e.tam_ung)||0;
+    if (e.phai_lam && !e.phai_lam_done) notifCount++;
+    for (const c of (e.maison_kct_chungtu||[])){ if (!c.da_co) notifCount++; }
+  }
   document.getElementById('sumThu').textContent = fmtMoney(thu);
   document.getElementById('sumChi').textContent = fmtMoney(chi);
   document.getElementById('sumTam').textContent = fmtMoney(tam);
   document.getElementById('sumTon').textContent = fmtMoney(thu - chi - tam);
+  const notifEl = document.getElementById('sumNotif');
+  notifEl.textContent = notifCount;
+  notifEl.className = 'mc-val' + (notifCount === 0 ? ' zero' : '');
 
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
@@ -360,13 +406,21 @@ function renderAll(){
       badgeText = `${doneCount}/${ctItems.length} đã có`;
     }
     const tr = document.createElement('tr');
+    tr.dataset.entryId = e.id;
+    const phaiLamHtml = e.phai_lam
+      ? `<label class="pl-check" onclick="event.stopPropagation()">
+           <input type="checkbox" onchange="togglePhaiLam('${e.id}', this.checked)" ${e.phai_lam_done ? 'checked' : ''}>
+           <span class="${e.phai_lam_done ? 'pl-done' : ''}">${escapeHtml(e.phai_lam)}</span>
+         </label>`
+      : `<span style="color:var(--text3)">—</span>`;
     tr.innerHTML = `
       <td class="ngay" data-label="Ngày">${fmtDate(e.ngay)}</td>
       <td class="num" data-label="Thu" style="color:var(--green2)">${e.thu ? fmtMoney(e.thu) : ''}</td>
       <td class="num" data-label="Chi" style="color:var(--red2)">${e.chi ? fmtMoney(e.chi) : ''}</td>
       <td class="num" data-label="Tạm ứng" style="color:var(--amber2)">${e.tam_ung ? fmtMoney(e.tam_ung) : ''}</td>
-      <td class="noidung" data-label="Nội dung">${escapeHtml(e.noi_dung||'')}${e.phai_lam ? `<div class="phai-lam">→ ${escapeHtml(e.phai_lam)}</div>` : ''}</td>
+      <td class="noidung" data-label="Nội dung">${escapeHtml(e.noi_dung||'')}</td>
       <td data-label="PT thanh toán" style="color:var(--text2);font-size:12.5px">${escapeHtml(e.phuong_thuc_tt||'')}</td>
+      <td data-label="Phải làm">${phaiLamHtml}</td>
       <td data-label="Chứng từ"><span class="b ${badgeClass}">${badgeText}</span></td>
     `;
     tr.onclick = () => toggleDetail(e, tr);
@@ -443,6 +497,17 @@ async function toggleChungTu(item, checked, entry){
     toast('Lỗi cập nhật chứng từ: ' + err.message, true);
   }
 }
+
+window.togglePhaiLam = async function(id, checked){
+  try{
+    const { error } = await sb.from('maison_kct_chiphi').update({ phai_lam_done: checked }).eq('id', id);
+    if (error) throw error;
+    await loadData();
+  }catch(err){
+    console.error(err);
+    toast('Lỗi cập nhật Phải làm: ' + err.message, true);
+  }
+};
 
 async function uploadChungTuFile(item, file, entry){
   if (!file) return;
@@ -527,6 +592,61 @@ document.getElementById('ctAddBtn').onclick = () => {
 };
 
 document.getElementById('btnAdd').onclick = openAddModal;
+
+document.getElementById('notifCard').onclick = openNotifModal;
+document.getElementById('notifCloseBtn').onclick = () => document.getElementById('notifOverlay').classList.remove('show');
+
+function openNotifModal(){
+  const list = getFiltered();
+  const todoWrap = document.getElementById('notifTodoList');
+  const ctWrap = document.getElementById('notifCtList');
+
+  const todos = list.filter(e => e.phai_lam && !e.phai_lam_done);
+  todoWrap.innerHTML = todos.length ? todos.map(e => `
+    <div class="notif-item" data-jump="${e.id}">
+      <div class="ni-date">${fmtDate(e.ngay)}</div>
+      <div class="ni-main">${escapeHtml(e.phai_lam)}</div>
+      <div class="ni-sub">${escapeHtml(e.noi_dung||'')}</div>
+    </div>
+  `).join('') : '<div class="notif-empty">Không có việc nào tồn đọng.</div>';
+
+  const ctRows = [];
+  for (const e of list){
+    const missing = (e.maison_kct_chungtu||[]).filter(c => !c.da_co);
+    if (missing.length) ctRows.push({ entry: e, missing });
+  }
+  ctWrap.innerHTML = ctRows.length ? ctRows.map(({entry,missing}) => `
+    <div class="notif-item" data-jump="${entry.id}">
+      <div class="ni-date">${fmtDate(entry.ngay)}</div>
+      <div class="ni-main">${escapeHtml(entry.noi_dung||'')}</div>
+      <div class="ni-sub">Thiếu: ${missing.map(m=>escapeHtml(m.mo_ta)).join(', ')}</div>
+    </div>
+  `).join('') : '<div class="notif-empty">Không có chứng từ nào còn thiếu.</div>';
+
+  document.querySelectorAll('#notifOverlay [data-jump]').forEach(el => {
+    el.onclick = () => jumpToEntry(el.dataset.jump);
+  });
+
+  document.getElementById('notifOverlay').classList.add('show');
+}
+
+function jumpToEntry(id){
+  document.getElementById('notifOverlay').classList.remove('show');
+  const entry = ALL_ENTRIES.find(e => e.id === id);
+  if (!entry) return;
+  if (CURRENT_MONTH !== 'all' && monthKey(entry.ngay) !== CURRENT_MONTH){
+    CURRENT_MONTH = 'all';
+    renderSidebar();
+    renderAll();
+  }
+  setTimeout(() => {
+    const tr = document.querySelector(`tr[data-entry-id="${id}"]`);
+    if (!tr) return;
+    tr.scrollIntoView({ behavior:'smooth', block:'center' });
+    toggleDetail(entry, tr);
+  }, 50);
+}
+
 document.getElementById('btnCancel').onclick = () => document.getElementById('overlay').classList.remove('show');
 
 document.getElementById('btnSave').onclick = async () => {
@@ -605,7 +725,8 @@ function fillSheet(ws, list){
   list.forEach(e=>{
     const ctText = (e.maison_kct_chungtu||[]).map((c,i)=> `${i+1}. ${c.mo_ta}${c.da_co ? ' (đã có)' : ' (thiếu)'}`).join('\n');
     const row = ws.addRow([
-      fmtDate(e.ngay), e.thu||0, e.chi||0, e.tam_ung||0, e.noi_dung||'', e.phuong_thuc_tt||'', e.phai_lam||'', ctText
+      fmtDate(e.ngay), e.thu||0, e.chi||0, e.tam_ung||0, e.noi_dung||'', e.phuong_thuc_tt||'',
+      e.phai_lam ? `${e.phai_lam}${e.phai_lam_done ? ' (đã xong)' : ' (chưa xong)'}` : '', ctText
     ]);
     row.eachCell((cell, colNumber)=>{
       cell.font = { name:'Arial', size:10 };
