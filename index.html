@@ -6,7 +6,7 @@
 <title>Maison De KCT · Sổ quỹ</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js"></script>
 <style>
 :root{
   --bg:#060810; --bg2:#0b1020; --bg3:#101628; --surface:#161f35; --surface2:#1c2840;
@@ -540,24 +540,73 @@ document.getElementById('btnSave').onclick = async () => {
 
 document.getElementById('btnExport').onclick = () => exportExcel();
 
+const HDR = ['NGÀY','THU','CHI','TẠM ỨNG','NỘI DUNG','PHƯƠNG THỨC THANH TOÁN','PHẢI LÀM','CHỨNG TỪ'];
+const COL_WIDTHS = [12,14,14,14,35,26,26,40];
+
+function xlsStyle(opts){
+  return {
+    font: { name:'Arial', sz:10, ...(opts.font||{}) },
+    border: {
+      top:{style:'thin',color:{rgb:'D0D7E3'}}, bottom:{style:'thin',color:{rgb:'D0D7E3'}},
+      left:{style:'thin',color:{rgb:'D0D7E3'}}, right:{style:'thin',color:{rgb:'D0D7E3'}}
+    },
+    fill: opts.fill || { patternType:'none' },
+    alignment: { vertical:'center', wrapText:true, ...(opts.alignment||{}) },
+    numFmt: opts.numFmt || 'General'
+  };
+}
+const XS = {
+  header: xlsStyle({ font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'1A2035'}}, alignment:{horizontal:'center'} }),
+  cell:   xlsStyle({}),
+  moneyThu: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'1E7A55'}} }),
+  moneyChi: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'B0483D'}} }),
+  moneyTam: xlsStyle({ numFmt:'#,##0', alignment:{horizontal:'right'}, font:{color:{rgb:'A87F26'}} })
+};
+
+function buildSheet(list){
+  const ws = {};
+  const range = { s:{r:0,c:0}, e:{r:0,c:HDR.length-1} };
+  HDR.forEach((h,ci)=>{ ws[XLSX.utils.encode_cell({r:0,c:ci})] = { v:h, t:'s', s:XS.header }; });
+  list.forEach((e,ri)=>{
+    const r = ri+1;
+    const ctText = (e.maison_kct_chungtu||[]).map((c,i)=> `${i+1}. ${c.mo_ta}${c.da_co ? ' (đã có)' : ' (thiếu)'}`).join('\n');
+    const vals = [
+      { v: fmtDate(e.ngay), t:'s', s:XS.cell },
+      { v: e.thu||0, t:'n', s:XS.moneyThu },
+      { v: e.chi||0, t:'n', s:XS.moneyChi },
+      { v: e.tam_ung||0, t:'n', s:XS.moneyTam },
+      { v: e.noi_dung||'', t:'s', s:XS.cell },
+      { v: e.phuong_thuc_tt||'', t:'s', s:XS.cell },
+      { v: e.phai_lam||'', t:'s', s:XS.cell },
+      { v: ctText, t:'s', s:XS.cell }
+    ];
+    vals.forEach((c,ci)=>{ ws[XLSX.utils.encode_cell({r,c:ci})] = c; });
+    range.e.r = r;
+  });
+  ws['!ref'] = XLSX.utils.encode_range(range);
+  ws['!cols'] = COL_WIDTHS.map(w=>({wch:w}));
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({s:{r:0,c:0},e:{r:0,c:HDR.length-1}}) };
+  ws['!freeze'] = { xSplit:1, ySplit:1, topLeftCell:'B2', activePane:'bottomRight', state:'frozen' };
+  return ws;
+}
+
 function exportExcel(){
-  const list = getFiltered().slice().sort((a,b)=> new Date(a.ngay)-new Date(b.ngay));
-  const rows = list.map(e => ({
-    'NGÀY': fmtDate(e.ngay),
-    'THU': e.thu || '',
-    'CHI': e.chi || '',
-    'TẠM ỨNG': e.tam_ung || '',
-    'NỘI DUNG': e.noi_dung || '',
-    'PHƯƠNG THỨC THANH TOÁN': e.phuong_thuc_tt || '',
-    'PHẢI LÀM': e.phai_lam || '',
-    'CHỨNG TỪ': (e.maison_kct_chungtu||[]).map((c,i)=> `${i+1}. ${c.mo_ta}${c.da_co ? ' (đã có)' : ' (thiếu)'}`).join('\n')
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:14},{wch:35},{wch:26},{wch:26},{wch:40}];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, CURRENT_MONTH==='all' ? 'Tat ca' : CURRENT_MONTH);
+  if (CURRENT_MONTH === 'all'){
+    const keys = [...new Set(ALL_ENTRIES.map(e=>monthKey(e.ngay)))].sort();
+    for (const k of keys){
+      const list = ALL_ENTRIES.filter(e=>monthKey(e.ngay)===k).sort((a,b)=>new Date(a.ngay)-new Date(b.ngay));
+      const sheetName = monthLabel(k).replace('Tháng ','Thang ');
+      XLSX.utils.book_append_sheet(wb, buildSheet(list), sheetName.slice(0,31));
+    }
+    if (!keys.length) XLSX.utils.book_append_sheet(wb, buildSheet([]), 'Tat ca');
+  } else {
+    const list = getFiltered().slice().sort((a,b)=> new Date(a.ngay)-new Date(b.ngay));
+    XLSX.utils.book_append_sheet(wb, buildSheet(list), monthLabel(CURRENT_MONTH).replace('Tháng ','Thang '));
+  }
   const fname = `ChiPhi_MaisonKCT_${CURRENT_MONTH==='all' ? 'TatCa' : CURRENT_MONTH}.xlsx`;
   XLSX.writeFile(wb, fname);
+  toast('Đã xuất file Excel');
 }
 
 loadData();
