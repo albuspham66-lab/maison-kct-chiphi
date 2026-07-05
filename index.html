@@ -121,9 +121,42 @@ textarea{resize:vertical;min-height:64px;}
 
 .empty{padding:60px 20px;text-align:center;color:var(--text2);}
 .empty .big{font-family:var(--font-display);font-size:16px;color:var(--text);margin-bottom:6px;}
+
+.mobile-topbar{display:none;position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;}
+#mobileMonthSelect{width:auto;max-width:150px;font-size:12px;padding:6px 8px;}
+
+@media (max-width:768px){
+  .mobile-topbar{display:flex;}
+  .sidebar{display:none;}
+  .shell{display:block;height:auto;}
+  .main{overflow-y:visible;}
+  .g-header{padding:16px 16px 0;flex-direction:column;align-items:stretch;gap:10px;}
+  .ph-right{width:100%;}
+  .ph-right .btn{flex:1;justify-content:center;}
+  .page{padding:14px 14px 60px;}
+  .mrow{grid-template-columns:1fr 1fr;gap:10px;}
+  .mc{padding:14px;}
+  .mc-val{font-size:18px;}
+  .card{border-radius:12px;}
+  thead{display:none;}
+  tbody tr{display:block;border-bottom:6px solid var(--bg);padding:10px 12px;}
+  tbody tr:hover td{background:none;}
+  tbody td{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:none;text-align:right;}
+  tbody td::before{content:attr(data-label);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:left;flex-shrink:0;}
+  tbody td.noidung{max-width:none;text-align:right;}
+  .detail-row td{display:block;padding:0;}
+  .detail-row td::before{content:none;}
+  .modal{width:100%;padding:20px 16px;}
+  .fgrid2{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
+
+<div id="mobileTopbar" class="mobile-topbar">
+  <div class="s-logo" style="font-size:16px;">Maison <em>De KCT</em></div>
+  <select id="mobileMonthSelect"></select>
+</div>
 
 <div class="shell">
 <aside class="sidebar">
@@ -288,6 +321,12 @@ function renderSidebar(){
     tab.onclick = () => { CURRENT_MONTH = k; renderSidebar(); renderAll(); };
     wrap.appendChild(tab);
   }
+
+  const mSel = document.getElementById('mobileMonthSelect');
+  mSel.innerHTML = `<option value="all">Tất cả (${ALL_ENTRIES.length})</option>` +
+    sortedKeys.map(k => `<option value="${k}">${monthLabel(k)} (${keys[k]})</option>`).join('');
+  mSel.value = CURRENT_MONTH;
+  mSel.onchange = () => { CURRENT_MONTH = mSel.value; renderSidebar(); renderAll(); };
 }
 
 function getFiltered(){
@@ -322,13 +361,13 @@ function renderAll(){
     }
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="ngay">${fmtDate(e.ngay)}</td>
-      <td class="num" style="color:var(--green2)">${e.thu ? fmtMoney(e.thu) : ''}</td>
-      <td class="num" style="color:var(--red2)">${e.chi ? fmtMoney(e.chi) : ''}</td>
-      <td class="num" style="color:var(--amber2)">${e.tam_ung ? fmtMoney(e.tam_ung) : ''}</td>
-      <td class="noidung">${escapeHtml(e.noi_dung||'')}${e.phai_lam ? `<div class="phai-lam">→ ${escapeHtml(e.phai_lam)}</div>` : ''}</td>
-      <td style="color:var(--text2);font-size:12.5px">${escapeHtml(e.phuong_thuc_tt||'')}</td>
-      <td><span class="b ${badgeClass}">${badgeText}</span></td>
+      <td class="ngay" data-label="Ngày">${fmtDate(e.ngay)}</td>
+      <td class="num" data-label="Thu" style="color:var(--green2)">${e.thu ? fmtMoney(e.thu) : ''}</td>
+      <td class="num" data-label="Chi" style="color:var(--red2)">${e.chi ? fmtMoney(e.chi) : ''}</td>
+      <td class="num" data-label="Tạm ứng" style="color:var(--amber2)">${e.tam_ung ? fmtMoney(e.tam_ung) : ''}</td>
+      <td class="noidung" data-label="Nội dung">${escapeHtml(e.noi_dung||'')}${e.phai_lam ? `<div class="phai-lam">→ ${escapeHtml(e.phai_lam)}</div>` : ''}</td>
+      <td data-label="PT thanh toán" style="color:var(--text2);font-size:12.5px">${escapeHtml(e.phuong_thuc_tt||'')}</td>
+      <td data-label="Chứng từ"><span class="b ${badgeClass}">${badgeText}</span></td>
     `;
     tr.onclick = () => toggleDetail(e, tr);
     tbody.appendChild(tr);
